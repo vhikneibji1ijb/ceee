@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prezență & Fondul Clasei</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #090d16;
+            color: #f1f5f9;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .nav-active {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 20px -2px rgba(99, 102, 241, 0.5);
+        }
+
+        .day-active {
+            background: rgba(99, 102, 241, 0.25);
+            border-color: #818cf8;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .status-present {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #34d399;
+        }
+
+        .status-absent {
+            background: rgba(239, 68, 68, 0.18);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #f87171;
+        }
+
+        .status-paid {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #34d399;
+        }
+
+        .status-unpaid {
+            background: rgba(239, 68, 68, 0.18);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #f87171;
+        }
+
+        .toast-slide {
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            from { transform: translate(-50%, 100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="pb-28">
+
+    <!-- Toast Notifications -->
+    <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 hidden glass-panel px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 text-sm font-semibold border border-white/10 toast-slide pointer-events-none">
+        <span id="toast-icon">✨</span>
+        <span id="toast-msg">Notificare</span>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel p-6 rounded-3xl max-w-sm w-full border border-white/10 text-center space-y-4">
+            <h3 id="modal-title" class="text-xl font-bold text-white">Confirmare</h3>
+            <p id="modal-desc" class="text-sm text-slate-400">Ești sigur că dorești să continui?</p>
+            <div class="flex space-x-3 pt-2">
+                <button onclick="closeModal(false)" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-2xl text-sm border border-white/5">Anulează</button>
+                <button onclick="closeModal(true)" class="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-2xl text-sm shadow-lg shadow-red-600/30">Confirmă</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER & WEEKDAY TABS -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-white/10 px-4 pt-4 pb-3">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                    🎓 Registrar CEEE
+                </h1>
+                <p id="current-date-display" class="text-xs text-indigo-300 font-medium">-- -- ----</p>
+            </div>
+            <input type="date" id="date-picker" class="bg-slate-800/80 border border-white/10 text-white text-xs rounded-xl px-3 py-2 outline-none focus:border-indigo-500">
+        </div>
+
+        <!-- WEEKDAY TABS (Luni - Vineri) -->
+        <div class="grid grid-cols-5 gap-1.5 p-1 bg-slate-900/60 rounded-2xl border border-white/5" id="weekday-tabs">
+            <button onclick="selectWeekday(1)" id="day-1" class="py-2 text-xs rounded-xl text-center font-semibold text-slate-400 transition-all border border-transparent">LUN</button>
+            <button onclick="selectWeekday(2)" id="day-2" class="py-2 text-xs rounded-xl text-center font-semibold text-slate-400 transition-all border border-transparent">MAR</button>
+            <button onclick="selectWeekday(3)" id="day-3" class="py-2 text-xs rounded-xl text-center font-semibold text-slate-400 transition-all border border-transparent">MIE</button>
+            <button onclick="selectWeekday(4)" id="day-4" class="py-2 text-xs rounded-xl text-center font-semibold text-slate-400 transition-all border border-transparent">JOI</button>
+            <button onclick="selectWeekday(5)" id="day-5" class="py-2 text-xs rounded-xl text-center font-semibold text-slate-400 transition-all border border-transparent">VIN</button>
+        </div>
+    </header>
+
+    <main class="p-4 max-w-2xl mx-auto space-y-5">
+
+        <!-- SECTION 1: PREZENȚĂ -->
+        <section id="section-attendance" class="space-y-4">
+            <!-- Pair Selector -->
+            <div class="flex space-x-2 overflow-x-auto pb-1 no-scrollbar" id="pair-selector">
+                <!-- Dynamically populated pairs -->
+            </div>
+
+            <!-- Attendance Controls -->
+            <div class="flex items-center justify-between bg-slate-900/40 p-3 rounded-2xl border border-white/5">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider" id="active-pair-title">Perechea 1</span>
+                <div class="flex space-x-2">
+                    <button onclick="markAll(true)" class="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-xs font-bold rounded-xl border border-emerald-500/30 transition">Toți Prezenți</button>
+                    <button onclick="markAll(false)" class="px-3 py-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 text-xs font-bold rounded-xl border border-red-500/30 transition">Toți Nemotivați</button>
+                </div>
+            </div>
+
+            <!-- Student List for Attendance -->
+            <div class="space-y-2" id="attendance-student-list">
+                <!-- Students dynamically rendered here -->
+            </div>
+
+            <!-- Generate Report Button -->
+            <button onclick="openReportModal()" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold rounded-2xl shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm">
+                <span>📋</span> Generează Raport Viber / Telegram
+            </button>
+        </section>
+
+        <!-- SECTION 2: FONDUL CLASEI -->
+        <section id="section-finance" class="space-y-4 hidden">
+            <!-- Collection Selector & New Collection Button -->
+            <div class="glass-panel p-4 rounded-3xl space-y-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider">Colectări active</h2>
+                    <button onclick="promptNewCollection()" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-500 transition">+ Colectare nouă</button>
+                </div>
+                <select id="finance-collection-select" onchange="renderFinance()" class="w-full bg-slate-900/80 border border-white/10 text-white text-sm rounded-xl px-3 py-2.5 outline-none focus:border-indigo-500">
+                    <!-- Collections dynamically loaded -->
+                </select>
+                <!-- Collection Stats -->
+                <div id="finance-stats" class="grid grid-cols-2 gap-3 pt-1">
+                    <div class="bg-slate-900/50 p-3 rounded-2xl border border-white/5 text-center">
+                        <span class="text-xs text-slate-400">Total Adunat</span>
+                        <p id="stat-total-money" class="text-lg font-black text-emerald-400">0 MDL</p>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded-2xl border border-white/5 text-center">
+                        <span class="text-xs text-slate-400">Achitați</span>
+                        <p id="stat-paid-count" class="text-lg font-black text-indigo-400">0 / 0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Payment List -->
+            <div class="space-y-2" id="finance-student-list">
+                <!-- Payment status dynamically rendered -->
+            </div>
+        </section>
+
+        <!-- SECTION 3: SETĂRI & ELEVI -->
+        <section id="section-settings" class="space-y-4 hidden">
+            <!-- Manage Students -->
+            <div class="glass-panel p-5 rounded-3xl space-y-4">
+                <h2 class="text-base font-bold text-white flex items-center gap-2">
+                    <span>👥</span> Lista Elevilor
+                </h2>
+                <textarea id="import-students-input" rows="4" placeholder="Lipește lista de elevi (câte un nume pe rând)..." class="w-full bg-slate-900/80 border border-white/10 text-white text-xs rounded-2xl p-3 outline-none focus:border-indigo-500"></textarea>
+                <button onclick="importStudents()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold rounded-2xl text-xs border border-indigo-500/30">
+                    Actualizează Lista Elevilor
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- REPORT MODAL -->
+    <div id="report-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="glass-panel w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-5 space-y-4 border-t sm:border border-white/10 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                <h3 class="text-lg font-bold text-white">Raport Final Absențe</h3>
+                <button onclick="closeReportModal()" class="text-slate-400 text-xl font-bold p-1">✕</button>
+            </div>
+            
+            <textarea id="report-text" readonly class="w-full bg-slate-900/90 text-slate-200 text-xs font-mono p-4 rounded-2xl border border-white/10 h-64 outline-none resize-none leading-relaxed"></textarea>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="copyReport()" class="py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2">
+                    <span>📋</span> Copiază Raportul
+                </button>
+                <button onclick="sendToViber()" class="py-3.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2">
+                    <span>💬</span> Trimite în Viber
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="fixed bottom-0 inset-x-0 z-40 glass-panel border-t border-white/10 px-6 py-3 flex justify-around">
+        <button onclick="switchTab('attendance')" id="nav-attendance" class="flex flex-col items-center space-y-1 text-xs font-bold text-indigo-400">
+            <span class="text-lg">📅</span>
+            <span>Prezență</span>
+        </button>
+        <button onclick="switchTab('finance')" id="nav-finance" class="flex flex-col items-center space-y-1 text-xs font-bold text-slate-400">
+            <span class="text-lg">💰</span>
+            <span>Fondul Clasei</span>
+        </button>
+        <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center space-y-1 text-xs font-bold text-slate-400">
+            <span class="text-lg">⚙️</span>
+            <span>Setări</span>
+        </button>
+    </nav>
+
+    <script>
+        // --- APP STATE ---
+        let state = {
+            students: ["Ababii Ion", "Balan Elena", "Cebotari Maxim", "Darii Andreea", "Eni Vladislav"],
+            pairs: ["Perechea 1", "Perechea 2", "Perechea 3", "Perechea 4"],
+            attendance: {}, // Format: { "YYYY-MM-DD": { pairIndex: { studentIndex: true/false } } }
+            collections: [
+                { id: "col_1", name: "Fondul Clasei (Luna Curentă)", amount: 50, payments: {} }
+            ],
+            selectedPair: 0,
+            selectedDate: new Date().toISOString().split('T')[0]
+        };
+
+        let confirmCallback = null;
+
+        // --- INITIALIZATION ---
+        document.addEventListener("DOMContentLoaded", () => {
+            loadData();
+            initDatePicker();
+            renderAll();
+        });
+
+        function loadData() {
+            const saved = localStorage.getItem("registrar_ceee_data");
+            if (saved) {
+                try {
+                    state = { ...state, ...JSON.parse(saved) };
+                } catch(e) { console.error(e); }
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem("registrar_ceee_data", JSON.stringify(state));
+        }
+
+        function initDatePicker() {
+            const picker = document.getElementById("date-picker");
+            picker.value = state.selectedDate;
+            picker.addEventListener("change", (e) => {
+                state.selectedDate = e.target.value;
+                updateWeekdayHeader();
+                renderAttendance();
+                saveData();
+            });
+            updateWeekdayHeader();
+        }
+
+        function updateWeekdayHeader() {
+            const d = new Date(state.selectedDate);
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            document.getElementById("current-date-display").innerText = d.toLocaleDateString('ro-RO', options);
+
+            let dayNum = d.getDay(); 
+            if (dayNum === 0 || dayNum === 6) dayNum = 1; // Default to Monday if weekend
+            
+            for (let i = 1; i <= 5; i++) {
+                const btn = document.getElementById(`day-${i}`);
+                if (i === dayNum) {
+                    btn.className = "py-2 text-xs rounded-xl text-center font-bold day-active border";
+                } else {
+                    btn.className = "py-2 text-xs rounded-xl text-center font-semibold text-slate-400 hover:text-white transition border border-transparent";
+                }
+            }
+        }
+
+        function selectWeekday(dayOfWeek) {
+            const current = new Date(state.selectedDate);
+            const currentDay = current.getDay() || 7; 
+            const diff = dayOfWeek - currentDay;
+            current.setDate(current.getDate() + diff);
+            state.selectedDate = current.toISOString().split('T')[0];
+            document.getElementById("date-picker").value = state.selectedDate;
+            updateWeekdayHeader();
+            renderAttendance();
+            saveData();
+        }
+
+        // --- ATTENDANCE FUNCTIONS ---
+        function renderAttendance() {
+            // Render Pair Pills
+            const pairContainer = document.getElementById("pair-selector");
+            pairContainer.innerHTML = state.pairs.map((pair, idx) => `
+                <button onclick="selectPair(${idx})" class="px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border ${
+                    state.selectedPair === idx 
+                    ? 'bg-indigo-600 text-white border-indigo-400 shadow-lg shadow-indigo-600/30' 
+                    : 'glass-card text-slate-400 border-white/5 hover:text-white'
+                }">${pair}</button>
+            `).join("");
+
+            document.getElementById("active-pair-title").innerText = state.pairs[state.selectedPair];
+
+            // Ensure date & pair structure exists
+            if (!state.attendance[state.selectedDate]) state.attendance[state.selectedDate] = {};
+            if (!state.attendance[state.selectedDate][state.selectedPair]) {
+                state.attendance[state.selectedDate][state.selectedPair] = {};
+                // Default all to Present (true)
+                state.students.forEach((_, idx) => {
+                    state.attendance[state.selectedDate][state.selectedPair][idx] = true;
+                });
+            }
+
+            const currentPairData = state.attendance[state.selectedDate][state.selectedPair];
+
+            // Render Student List
+            const studentContainer = document.getElementById("attendance-student-list");
+            if (state.students.length === 0) {
+                studentContainer.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">Nu există elevi. Adaugă din tab-ul Setări.</div>`;
+                return;
+            }
+
+            studentContainer.innerHTML = state.students.map((student, idx) => {
+                const isPresent = currentPairData[idx] !== false; 
+                return `
+                    <div class="glass-card p-3.5 rounded-2xl flex items-center justify-between border border-white/5">
+                        <span class="text-xs font-semibold text-slate-200">${idx + 1}. ${student}</span>
+                        <button onclick="toggleAttendance(${idx})" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold tracking-wide transition-all ${
+                            isPresent ? 'status-present' : 'status-absent'
+                        }">
+                            ${isPresent ? '✓ PREZENT' : '✕ NEMOTIVAT'}
+                        </button>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function selectPair(idx) {
+            state.selectedPair = idx;
+            renderAttendance();
+        }
+
+        function toggleAttendance(studentIdx) {
+            const current = state.attendance[state.selectedDate][state.selectedPair][studentIdx];
+            state.attendance[state.selectedDate][state.selectedPair][studentIdx] = !current;
+            renderAttendance();
+            saveData();
+        }
+
+        function markAll(status) {
+            state.students.forEach((_, idx) => {
+                state.attendance[state.selectedDate][state.selectedPair][idx] = status;
+            });
+            renderAttendance();
+            saveData();
+            showToast(status ? "Toți elevii au fost marcați Prezenți" : "Toți elevii au fost marcați Nemotivați", "✅");
+        }
+
+        // --- REPORT GENERATION ---
+        function generateReportText() {
+            const dateObj = new Date(state.selectedDate);
+            const formattedDate = dateObj.toLocaleDateString('ro-RO', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+            
+            let report = `📅 RAPORT ABSENȚE — ${formattedDate.toUpperCase()}\n\n`;
+
+            state.pairs.forEach((pairName, pairIdx) => {
+                report += `📌 ${pairName.toUpperCase()}:\n`;
+                const pairData = (state.attendance[state.selectedDate] && state.attendance[state.selectedDate][pairIdx]) || {};
+                
+                const absents = [];
+                state.students.forEach((student, sIdx) => {
+                    if (pairData[sIdx] === false) {
+                        absents.push(student);
+                    }
+                });
+
+                if (absents.length === 0) {
+                    report += `  • Toți prezenți ✅\n\n`;
+                } else {
+                    report += `  • Nemotivați (${absents.length}):\n`;
+                    absents.forEach(s => {
+                        report += `    - ${s}\n`;
+                    });
+                    report += `\n`;
+                }
+            });
+
+            return report.trim();
+        }
+
+        function openReportModal() {
+            document.getElementById("report-text").value = generateReportText();
+            document.getElementById("report-modal").classList.remove("hidden");
+        }
+
+        function closeReportModal() {
+            document.getElementById("report-modal").classList.add("hidden");
+        }
+
+        function copyReport() {
+            const txt = document.getElementById("report-text");
+            txt.select();
+            navigator.clipboard.writeText(txt.value).then(() => {
+                showToast("Raport copiat în clipboard!", "📋");
+            }).catch(() => {
+                showToast("Eroare la copiere", "⚠️");
+            });
+        }
+
+        function sendToViber() {
+            const txt = encodeURIComponent(generateReportText());
+            window.location.href = `viber://forward?text=${txt}`;
+        }
+
+        // --- FINANCE FUNCTIONS ---
+        function renderFinance() {
+            const select = document.getElementById("finance-collection-select");
+            select.innerHTML = state.collections.map(c => `
+                <option value="${c.id}">${c.name} (${c.amount} MDL/elev)</option>
+            `).join("");
+
+            if (state.collections.length === 0) {
+                document.getElementById("finance-student-list").innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">Nicio colectare creată.</div>`;
+                return;
+            }
+
+            const activeColId = select.value || state.collections[0].id;
+            const collection = state.collections.find(c => c.id === activeColId) || state.collections[0];
+
+            let paidCount = 0;
+            const studentListContainer = document.getElementById("finance-student-list");
+
+            studentListContainer.innerHTML = state.students.map((student, idx) => {
+                const isPaid = collection.payments[idx] === true;
+                if (isPaid) paidCount++;
+                return `
+                    <div class="glass-card p-3.5 rounded-2xl flex items-center justify-between border border-white/5">
+                        <span class="text-xs font-semibold text-slate-200">${idx + 1}. ${student}</span>
+                        <button onclick="togglePayment('${collection.id}', ${idx})" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold tracking-wide transition-all ${
+                            isPaid ? 'status-paid' : 'status-unpaid'
+                        }">
+                            ${isPaid ? '✓ ACHITAT' : '✕ NEACHITAT'}
+                        </button>
+                    </div>
+                `;
+            }).join("");
+
+            document.getElementById("stat-total-money").innerText = `${paidCount * collection.amount} MDL`;
+            document.getElementById("stat-paid-count").innerText = `${paidCount} / ${state.students.length}`;
+        }
+
+        function togglePayment(colId, studentIdx) {
+            const col = state.collections.find(c => c.id === colId);
+            if (col) {
+                col.payments[studentIdx] = !col.payments[studentIdx];
+                renderFinance();
+                saveData();
+            }
+        }
+
+        function promptNewCollection() {
+            const name = prompt("Denumirea colectării (ex: Fondul Clasei):");
+            if (!name) return;
+            const amount = prompt("Suma de elev (MDL):", "50");
+            if (!amount) return;
+
+            const newCol = {
+                id: "col_" + Date.now(),
+                name: name,
+                amount: parseInt(amount) || 0,
+                payments: {}
+            };
+            state.collections.push(newCol);
+            saveData();
+            renderFinance();
+            showToast("Colectare nouă adăugată!", "💰");
+        }
+
+        // --- SETTINGS & STUDENTS ---
+        function importStudents() {
+            const raw = document.getElementById("import-students-input").value;
+            const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length === 0) {
+                showToast("Introdu cel puțin un nume", "⚠️");
+                return;
+            }
+            state.students = lines;
+            saveData();
+            renderAttendance();
+            showToast("Lista elevilor a fost actualizată!", "👥");
+            document.getElementById("import-students-input").value = "";
+        }
+
+        // --- NAVIGATION & UI HELPERS ---
+        function switchTab(tab) {
+            ['attendance', 'finance', 'settings'].forEach(t => {
+                document.getElementById(`section-${t}`).classList.add("hidden");
+                const navBtn = document.getElementById(`nav-${t}`);
+                navBtn.className = "flex flex-col items-center space-y-1 text-xs font-bold text-slate-400";
+            });
+
+            document.getElementById(`section-${tab}`).classList.remove("hidden");
+            document.getElementById(`nav-${tab}`).className = "flex flex-col items-center space-y-1 text-xs font-bold text-indigo-400";
+
+            if (tab === 'finance') renderFinance();
+            if (tab === 'settings') {
+                document.getElementById("import-students-input").value = state.students.join('\n');
+            }
+        }
+
+        function renderAll() {
+            renderAttendance();
+        }
+
+        function showToast(msg, icon = "✨") {
+            const toast = document.getElementById("toast");
+            document.getElementById("toast-msg").innerText = msg;
+            document.getElementById("toast-icon").innerText = icon;
+            toast.classList.remove("hidden");
+            setTimeout(() => {
+                toast.classList.add("hidden");
+            }, 2500);
+        }
+
+        function closeModal(result) {
+            document.getElementById("confirm-modal").classList.add("hidden");
+            if (confirmCallback) confirmCallback(result);
+        }
+    </script>
+</body>
+</html>
