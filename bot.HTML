@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prezență & Fondul Clasei</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: rgba(51, 65, 85, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+        }
+
+        .glass-input:focus {
+            border-color: #3b82f6;
+            outline: none;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .active-tab {
+            color: #60a5fa;
+            border-bottom: 2px solid #60a5fa;
+        }
+
+        .day-btn-active {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            border-color: #60a5fa !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 overflow-x-hidden">
+
+    <!-- App Header -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-blue-500/30">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold leading-tight">Catalog Grupa</h1>
+                <p id="current-group-subtitle" class="text-xs text-slate-400">Prezență & Fonduri</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="switchTab('report')" class="p-2 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 transition text-xs font-medium flex items-center space-x-1">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span class="hidden sm:inline">Raport Viber</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="sticky top-[57px] z-30 glass-panel border-b border-slate-800/80 px-2 flex justify-around text-xs font-semibold">
+        <button id="tab-btn-attendance" onclick="switchTab('attendance')" class="py-3 px-2 flex flex-col items-center space-y-1 active-tab transition-all">
+            <i class="fa-solid fa-user-check text-base"></i>
+            <span>Prezență</span>
+        </button>
+        <button id="tab-btn-funds" onclick="switchTab('funds')" class="py-3 px-2 flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-200 transition-all">
+            <i class="fa-solid fa-wallet text-base"></i>
+            <span>Fonduri</span>
+        </button>
+        <button id="tab-btn-students" onclick="switchTab('students')" class="py-3 px-2 flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-200 transition-all">
+            <i class="fa-solid fa-users text-base"></i>
+            <span>Elevi</span>
+        </button>
+        <button id="tab-btn-schedule" onclick="switchTab('schedule')" class="py-3 px-2 flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-200 transition-all">
+            <i class="fa-solid fa-calendar-days text-base"></i>
+            <span>Orar Perechi</span>
+        </button>
+    </nav>
+
+    <main class="p-4 max-w-2xl mx-auto">
+
+        <!-- 1. TAB: ATTENDANCE (PREZENȚĂ) -->
+        <section id="tab-attendance" class="space-y-4">
+            
+            <!-- Week & Day Selector Widget -->
+            <div class="glass-card p-4 rounded-2xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-regular fa-calendar-alt text-blue-400"></i> Selectează Săptămâna
+                    </label>
+                    <button onclick="setTodayWeekAndDay()" class="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-right text-[10px]"></i> Săptămâna Curentă
+                    </button>
+                </div>
+
+                <!-- Select Week Interval -->
+                <div class="flex items-center gap-2">
+                    <button onclick="navigateWeek(-1)" class="p-2.5 rounded-xl glass-input hover:bg-slate-800 text-slate-300">
+                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                    </button>
+                    <select id="week-selector" onchange="onWeekSelectorChange()" class="glass-input w-full p-2.5 rounded-xl text-xs font-bold text-blue-400 text-center">
+                    </select>
+                    <button onclick="navigateWeek(1)" class="p-2.5 rounded-xl glass-input hover:bg-slate-800 text-slate-300">
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Select Day of Week Buttons -->
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-400 block mb-1.5">Alege ziua din săptămână:</label>
+                    <div class="grid grid-cols-5 gap-1.5" id="week-days-buttons-container">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Current Active Date Display -->
+                <div class="pt-2 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-300">
+                    <span class="text-slate-400">Data selectată:</span>
+                    <strong id="selected-full-date-text" class="text-emerald-400 font-bold">--</strong>
+                </div>
+            </div>
+
+            <!-- Lesson/Pair Selection & Bulk Controls -->
+            <div class="glass-card p-4 rounded-2xl space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Perechea / Lecția</label>
+                        <select id="attendance-lesson-select" onchange="renderAttendanceList()" class="glass-input w-full p-2.5 rounded-xl text-sm font-medium">
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2 pt-1 sm:pt-4">
+                        <button onclick="setAllAttendance('Prezent')" class="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 text-xs font-semibold transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-check"></i> Toți Prezenți
+                        </button>
+                        <button onclick="setAllAttendance('Nemotivat')" class="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30 text-xs font-semibold transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-xmark"></i> Toți Nemotivați
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance List -->
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-700/50">
+                    <h2 class="font-bold text-sm text-slate-200">Lista Elevilor</h2>
+                    <span id="attendance-stats" class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800 text-slate-300">
+                        0 Prezenți / 0 Nemotivați
+                    </span>
+                </div>
+                <div id="attendance-list-container" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- 2. TAB: MULTIPLE CLASS FUNDS (FONDURI MULTIPLE) -->
+        <section id="tab-funds" class="hidden space-y-4">
+            
+            <!-- VIEW A: LIST OF ALL FUNDS -->
+            <div id="funds-list-view" class="space-y-4">
+                <div class="glass-card p-4 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-wallet text-amber-400"></i> Creează Fond Nou
+                        </h2>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-slate-400 font-medium block mb-1">Titlu / Scop Fond</label>
+                            <input type="text" id="new-fund-title" placeholder="ex: Fond Octombrie, Excursie..." class="glass-input w-full p-2.5 rounded-xl text-sm font-medium">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-400 font-medium block mb-1">Suma per Elev (MDL)</label>
+                            <input type="number" id="new-fund-target" value="100" class="glass-input w-full p-2.5 rounded-xl text-sm font-semibold">
+                        </div>
+                    </div>
+                    <button onclick="createNewFund()" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20">
+                        <i class="fa-solid fa-plus"></i> Creează Fond
+                    </button>
+                </div>
+
+                <div class="space-y-3">
+                    <h2 class="font-bold text-sm text-slate-200 px-1">Colectări Active</h2>
+                    <div id="funds-cards-container" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- VIEW B: DETAILED SINGLE FUND VIEW -->
+            <div id="fund-detail-view" class="hidden space-y-4">
+                <div class="glass-card p-4 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <button onclick="showFundsListView()" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 font-medium hover:bg-slate-700 transition flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-left"></i> Înapoi la Fonduri
+                        </button>
+                        <button onclick="deleteCurrentFund()" class="text-xs px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30 transition">
+                            <i class="fa-solid fa-trash-can"></i> Șterge Fondul
+                        </button>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-700/50">
+                        <h2 id="active-fund-title" class="text-base font-bold text-white">---</h2>
+                        <p id="active-fund-sub" class="text-xs text-slate-400">Target per elev: 0 MDL</p>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-700/50 flex items-center justify-between text-xs">
+                        <span class="text-slate-400">Total Colectat: <strong id="active-fund-collected" class="text-emerald-400">0 MDL</strong></span>
+                        <span class="text-slate-400">Progres: <strong id="active-fund-progress" class="text-blue-400">0%</strong></span>
+                    </div>
+                </div>
+
+                <!-- Student Payment List for Active Fund -->
+                <div class="glass-card rounded-2xl p-4 space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-700/50">
+                        <h2 class="font-bold text-sm text-slate-200">Statut Achitări Elevi</h2>
+                        <div class="flex gap-2">
+                            <button onclick="setAllFundsForActive(true)" class="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Toți Achitat</button>
+                            <button onclick="setAllFundsForActive(false)" class="text-xs px-2.5 py-1 rounded-lg bg-slate-700 text-slate-300">Toți Neachitat</button>
+                        </div>
+                    </div>
+                    <div id="fund-students-list-container" class="space-y-2"></div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- 3. TAB: MANAGE STUDENTS -->
+        <section id="tab-students" class="hidden space-y-4">
+            <div class="glass-card p-4 rounded-2xl space-y-3">
+                <h2 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-blue-400"></i> Adăugare / Import Elevi
+                </h2>
+                <p class="text-xs text-slate-400">Introdu câte un nume pe fiecare rând pentru a adăuga mai mulți elevi odată.</p>
+                <textarea id="bulk-students-input" rows="4" placeholder="Popescu Ion&#10;Ionescu Maria&#10;Vasilescu Andrei" class="glass-input w-full p-3 rounded-xl text-sm font-sans"></textarea>
+                <div class="flex justify-end gap-2">
+                    <button onclick="importStudents()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition">
+                        Adaugă Elevi
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-700/50">
+                    <h2 class="font-bold text-sm text-slate-200">Elevi Înregistrați (<span id="students-count">0</span>)</h2>
+                    <button onclick="clearAllStudents()" class="text-xs text-rose-400 hover:text-rose-300">Șterge Toți</button>
+                </div>
+                <div id="manage-students-container" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- 4. TAB: MANAGE SCHEDULE BY DAY -->
+        <section id="tab-schedule" class="hidden space-y-4">
+            <div class="glass-card p-4 rounded-2xl space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-clock text-amber-400"></i> Configurare Perechi Pe Zile
+                        </h2>
+                        <p class="text-xs text-slate-400">Selectează ziua și configurează perechile specifice.</p>
+                    </div>
+                    <select id="schedule-day-select" onchange="renderSchedulePairs()" class="glass-input p-2 rounded-xl text-xs font-bold text-blue-400">
+                        <option value="Luni">Luni</option>
+                        <option value="Marti">Marți</option>
+                        <option value="Miercuri">Miercuri</option>
+                        <option value="Joi">Joi</option>
+                        <option value="Vineri">Vineri</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center justify-between pt-2">
+                    <span class="text-xs font-semibold text-slate-300">Lecții/Perechi pentru această zi:</span>
+                    <button onclick="addSchedulePair()" class="text-xs px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-500 transition">
+                        + Adaugă Pereche
+                    </button>
+                </div>
+
+                <div id="schedule-pairs-container" class="space-y-2.5 pt-2"></div>
+            </div>
+        </section>
+
+        <!-- 5. TAB / MODAL VIEW: VIBER REPORT GENERATOR -->
+        <section id="tab-report" class="hidden space-y-4">
+            <div class="glass-card p-4 rounded-2xl space-y-4 border border-purple-500/30">
+                <div class="flex items-center justify-between border-b border-slate-700/50 pb-3">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-brands fa-viber text-2xl text-purple-400"></i>
+                        <div>
+                            <h2 class="font-bold text-sm text-slate-100">Raport Prezență Viber</h2>
+                            <p class="text-xs text-slate-400">Format automatizat pentru grupul de părinți/părinți-elevi</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Aprevizualizare Mesaj Raport</label>
+                    <textarea id="viber-report-text" readonly class="glass-input w-full p-3 rounded-xl text-xs font-mono h-64 text-slate-200 resize-none leading-relaxed"></textarea>
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="copyViberReport()" class="flex-1 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30">
+                        <i class="fa-regular fa-copy"></i> Copiază Raportul
+                    </button>
+                    <button onclick="switchTab('attendance')" class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm transition">
+                        Înapoi
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Custom Safe Modal -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel rounded-2xl max-w-sm w-full p-5 space-y-4 border border-slate-700 shadow-2xl animate-fade-in">
+            <div class="flex items-center space-x-3">
+                <div id="modal-icon" class="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-circle-info"></i>
+                </div>
+                <h3 id="modal-title" class="font-bold text-slate-100 text-base">Notificare</h3>
+            </div>
+            <p id="modal-body" class="text-sm text-slate-300 leading-normal"></p>
+            <div id="modal-actions" class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold hover:bg-slate-700">Închide</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-notification" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-800/90 text-white border border-slate-700 px-4 py-2.5 rounded-full text-xs font-medium shadow-xl backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none flex items-center space-x-2">
+        <i id="toast-icon" class="fa-solid fa-check text-emerald-400"></i>
+        <span id="toast-message">Mesaj</span>
+    </div>
+
+    <script>
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+
+        const MONTH_NAMES_RO = [
+            "Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie",
+            "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"
+        ];
+
+        const WEEKDAYS = ["Luni", "Marti", "Miercuri", "Joi", "Vineri"];
+
+        let state = {
+            students: [],
+            schedule: {
+                "Luni": [
+                    { id: "p1_l", name: "Perechea 1 (Matematică)", time: "08:30 - 09:50" },
+                    { id: "p2_l", name: "Perechea 2 (Limba Română)", time: "10:00 - 11:20" }
+                ],
+                "Marti": [
+                    { id: "p1_ma", name: "Perechea 1 (Informatica)", time: "08:30 - 09:50" }
+                ],
+                "Miercuri": [
+                    { id: "p1_mi", name: "Perechea 1 (Chimie)", time: "08:30 - 09:50" }
+                ],
+                "Joi": [
+                    { id: "p1_j", name: "Perechea 1 (Geografie)", time: "08:30 - 09:50" }
+                ],
+                "Vineri": [
+                    { id: "p1_v", name: "Perechea 1 (Programare)", time: "08:30 - 09:50" }
+                ]
+            },
+            attendance: {},
+            fundsList: [],
+            activeFundId: null,
+            weeksList: [],          // List of available weeks
+            selectedWeekIndex: 0,   // Index of current selected week
+            selectedDayIndex: 0     // 0=Luni, 1=Marti, 2=Miercuri, 3=Joi, 4=Vineri
+        };
+
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('catalog_group_app_db_v4');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.students = parsed.students || [];
+                    state.schedule = parsed.schedule || state.schedule;
+                    state.attendance = parsed.attendance || {};
+                    state.fundsList = parsed.fundsList || [];
+                } else {
+                    state.students = [
+                        { id: "s1", name: "Avram Alexandru" },
+                        { id: "s2", name: "Balan Elena" },
+                        { id: "s3", name: "Ceban Maxim" },
+                        { id: "s4", name: "Dimitriu Sofia" },
+                        { id: "s5", name: "Lupu Cristian" }
+                    ];
+                    state.fundsList = [
+                        {
+                            id: "f_default",
+                            title: "Fondul Clasei Octombrie",
+                            targetAmount: 100,
+                            paidStudents: {}
+                        }
+                    ];
+                    saveState();
+                }
+            } catch(e) {
+                console.error("Eroare la încărcarea datelor", e);
+            }
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem('catalog_group_app_db_v4', JSON.stringify({
+                    students: state.students,
+                    schedule: state.schedule,
+                    attendance: state.attendance,
+                    fundsList: state.fundsList
+                }));
+            } catch(e) {
+                console.error("Eroare la salvarea datelor", e);
+            }
+        }
+
+        window.onload = function() {
+            loadState();
+            generateWeeksList();
+            setTodayWeekAndDay();
+            renderFundsListView();
+            renderManageStudents();
+            renderSchedulePairs();
+        };
+
+        // --- WEEK & DATE SYSTEM ---
+        function getMonday(d) {
+            const date = new Date(d);
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(date.setDate(diff));
+        }
+
+        function formatDateShort(dateObj) {
+            const d = dateObj.getDate().toString().padStart(2, '0');
+            const m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+            return `${d}.${m}`;
+        }
+
+        function formatDateKey(dateObj) {
+            const d = dateObj.getDate().toString().padStart(2, '0');
+            const m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+            const y = dateObj.getFullYear();
+            return `${y}-${m}-${d}`;
+        }
+
+        function generateWeeksList() {
+            state.weeksList = [];
+            const currentMonday = getMonday(new Date());
+
+            // Generate 8 past weeks, current week, and 8 future weeks
+            for (let i = -8; i <= 8; i++) {
+                const monday = new Date(currentMonday);
+                monday.setDate(monday.getDate() + (i * 7));
+
+                const sunday = new Date(monday);
+                sunday.setDate(sunday.getDate() + 6);
+
+                const friday = new Date(monday);
+                friday.setDate(friday.getDate() + 4);
+
+                state.weeksList.push({
+                    monday: monday,
+                    friday: friday,
+                    sunday: sunday,
+                    label: `Săptămâna ${formatDateShort(monday)} - ${formatDateShort(friday)} (${monday.getFullYear()})`,
+                    isCurrent: i === 0
+                });
+            }
+
+            const selector = document.getElementById('week-selector');
+            selector.innerHTML = '';
+            state.weeksList.forEach((week, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.innerText = week.isCurrent ? `⭐ ${week.label} (Curentă)` : week.label;
+                selector.appendChild(option);
+            });
+        }
+
+        function setTodayWeekAndDay() {
+            const today = new Date();
+            const currentMonday = getMonday(today);
+            const currentMondayKey = formatDateKey(currentMonday);
+
+            let weekIdx = state.weeksList.findIndex(w => formatDateKey(w.monday) === currentMondayKey);
+            if (weekIdx === -1) weekIdx = Math.floor(state.weeksList.length / 2);
+
+            let dayIdx = today.getDay() - 1; // 0=Luni, 4=Vineri
+            if (dayIdx < 0 || dayIdx > 4) dayIdx = 0; // Default to Monday if weekend
+
+            state.selectedWeekIndex = weekIdx;
+            state.selectedDayIndex = dayIdx;
+
+            document.getElementById('week-selector').value = weekIdx;
+            updateWeekUI();
+        }
+
+        function onWeekSelectorChange() {
+            state.selectedWeekIndex = parseInt(document.getElementById('week-selector').value);
+            updateWeekUI();
+        }
+
+        function navigateWeek(direction) {
+            let newIndex = state.selectedWeekIndex + direction;
+            if (newIndex >= 0 && newIndex < state.weeksList.length) {
+                state.selectedWeekIndex = newIndex;
+                document.getElementById('week-selector').value = newIndex;
+                updateWeekUI();
+            }
+        }
+
+        function selectDay(dayIndex) {
+            state.selectedDayIndex = dayIndex;
+            updateWeekUI();
+        }
+
+        function getActiveSelectedDate() {
+            const week = state.weeksList[state.selectedWeekIndex];
+            const date = new Date(week.monday);
+            date.setDate(date.getDate() + state.selectedDayIndex);
+            return date;
+        }
+
+        function updateWeekUI() {
+            const week = state.weeksList[state.selectedWeekIndex];
+            const daysContainer = document.getElementById('week-days-buttons-container');
+            daysContainer.innerHTML = '';
+
+            WEEKDAYS.forEach((dayName, idx) => {
+                const dayDate = new Date(week.monday);
+                dayDate.setDate(dayDate.getDate() + idx);
+
+                const isActive = idx === state.selectedDayIndex;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => selectDay(idx);
+                btn.className = `p-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center border ${
+                    isActive 
+                        ? 'day-btn-active' 
+                        : 'glass-card border-slate-700/60 text-slate-300 hover:bg-slate-800'
+                }`;
+
+                btn.innerHTML = `
+                    <span class="text-[10px] opacity-80 uppercase">${dayName.substr(0, 3)}</span>
+                    <span class="text-xs font-extrabold">${formatDateShort(dayDate)}</span>
+                `;
+                daysContainer.appendChild(btn);
+            });
+
+            const activeDate = getActiveSelectedDate();
+            const dayName = WEEKDAYS[state.selectedDayIndex];
+            const formattedDateStr = `${dayName}, ${activeDate.getDate()} ${MONTH_NAMES_RO[activeDate.getMonth()]} ${activeDate.getFullYear()}`;
+            document.getElementById('selected-full-date-text').innerText = formattedDateStr;
+
+            // Sync schedule selector day
+            const schedSelect = document.getElementById('schedule-day-select');
+            if (schedSelect) schedSelect.value = dayName;
+
+            populateLessonSelect();
+            renderAttendanceList();
+        }
+
+        // --- TAB NAVIGATION ---
+        function switchTab(tabId) {
+            const tabs = ['attendance', 'funds', 'students', 'schedule', 'report'];
+            tabs.forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`tab-btn-${t}`);
+                if (t === tabId) {
+                    el?.classList.remove('hidden');
+                    btn?.classList.add('active-tab');
+                    btn?.classList.remove('text-slate-400');
+                } else {
+                    el?.classList.add('hidden');
+                    btn?.classList.remove('active-tab');
+                    btn?.classList.add('text-slate-400');
+                }
+            });
+
+            if (tabId === 'report') {
+                generateViberReport();
+            }
+        }
+
+        // --- ATTENDANCE MANAGEMENT ---
+        function populateLessonSelect() {
+            const select = document.getElementById('attendance-lesson-select');
+            select.innerHTML = '';
+            
+            const currentDayName = WEEKDAYS[state.selectedDayIndex];
+            const currentDaySchedule = state.schedule[currentDayName] || [];
+
+            if (currentDaySchedule.length === 0) {
+                select.innerHTML = `<option value="">Fără perechi configurate pentru ${currentDayName}</option>`;
+                return;
+            }
+
+            currentDaySchedule.forEach(pair => {
+                select.innerHTML += `<option value="${pair.id}">${pair.name} (${pair.time})</option>`;
+            });
+        }
+
+        function renderAttendanceList() {
+            const container = document.getElementById('attendance-list-container');
+            const lessonId = document.getElementById('attendance-lesson-select').value;
+            const activeDate = getActiveSelectedDate();
+            const dateKey = formatDateKey(activeDate);
+
+            if (!lessonId || state.students.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-xs">
+                        <i class="fa-solid fa-folder-open text-2xl mb-2"></i>
+                        <p>Nu există elevi sau perechi selectate pentru această zi.</p>
+                    </div>`;
+                document.getElementById('attendance-stats').innerText = "0 Prezenți / 0 Nemotivați";
+                return;
+            }
+
+            if (!state.attendance[dateKey]) state.attendance[dateKey] = {};
+            if (!state.attendance[dateKey][lessonId]) state.attendance[dateKey][lessonId] = {};
+
+            const lessonAttendance = state.attendance[dateKey][lessonId];
+            let presentCount = 0;
+            let unexcusedCount = 0;
+
+            container.innerHTML = '';
+
+            state.students.forEach(student => {
+                const status = lessonAttendance[student.id] || 'Prezent';
+                if (status === 'Prezent') presentCount++;
+                if (status === 'Nemotivat') unexcusedCount++;
+
+                const isPresent = status === 'Prezent';
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl glass-card flex items-center justify-between border ${isPresent ? 'border-emerald-500/20' : 'border-rose-500/30 bg-rose-500/5'}`;
+                
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full ${isPresent ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'} flex items-center justify-center text-xs font-bold">
+                            ${student.name.charAt(0)}
+                        </div>
+                        <div>
+                            <p class="font-semibold text-xs text-slate-200">${student.name}</p>
+                            <span class="text-[10px] font-bold uppercase tracking-wider ${isPresent ? 'text-emerald-400' : 'text-rose-400'}">
+                                ${isPresent ? '<i class="fa-solid fa-check"></i> Prezent' : '<i class="fa-solid fa-xmark"></i> Nemotivat'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <button onclick="toggleStudentAttendance('${student.id}', 'Prezent')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${isPresent ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}">
+                            Prezent
+                        </button>
+                        <button onclick="toggleStudentAttendance('${student.id}', 'Nemotivat')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${!isPresent ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}">
+                            Nemotivat
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('attendance-stats').innerText = `${presentCount} Prezenți / ${unexcusedCount} Nemotivați`;
+        }
+
+        function toggleStudentAttendance(studentId, newStatus) {
+            const activeDate = getActiveSelectedDate();
+            const dateKey = formatDateKey(activeDate);
+            const lessonId = document.getElementById('attendance-lesson-select').value;
+            if (!lessonId) return;
+
+            if (!state.attendance[dateKey]) state.attendance[dateKey] = {};
+            if (!state.attendance[dateKey][lessonId]) state.attendance[dateKey][lessonId] = {};
+
+            state.attendance[dateKey][lessonId][studentId] = newStatus;
+            saveState();
+            renderAttendanceList();
+        }
+
+        function setAllAttendance(status) {
+            const activeDate = getActiveSelectedDate();
+            const dateKey = formatDateKey(activeDate);
+            const lessonId = document.getElementById('attendance-lesson-select').value;
+            if (!lessonId) return;
+
+            if (!state.attendance[dateKey]) state.attendance[dateKey] = {};
+            if (!state.attendance[dateKey][lessonId]) state.attendance[dateKey][lessonId] = {};
+
+            state.students.forEach(student => {
+                state.attendance[dateKey][lessonId][student.id] = status;
+            });
+
+            saveState();
+            renderAttendanceList();
+            showToast(`Toți elevii marcați ca "${status}"`);
+        }
+
+        // --- MULTIPLE FUNDS MANAGEMENT ---
+        function createNewFund() {
+            const titleInput = document.getElementById('new-fund-title');
+            const targetInput = document.getElementById('new-fund-target');
+
+            const title = titleInput.value.trim();
+            const target = parseFloat(targetInput.value) || 0;
+
+            if (!title) {
+                showToast('Introduceți un titlu pentru fond!');
+                return;
+            }
+
+            const fundId = "fund_" + Date.now();
+            const newFund = {
+                id: fundId,
+                title: title,
+                targetAmount: target,
+                paidStudents: {}
+            };
+
+            state.fundsList.push(newFund);
+            saveState();
+
+            titleInput.value = '';
+            targetInput.value = '100';
+
+            renderFundsListView();
+            showToast('Fond creat cu succes!');
+        }
+
+        function renderFundsListView() {
+            document.getElementById('funds-list-view').classList.remove('hidden');
+            document.getElementById('fund-detail-view').classList.add('hidden');
+
+            const container = document.getElementById('funds-cards-container');
+            container.innerHTML = '';
+
+            if (state.fundsList.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">Nu există fonduri create. Adaugă primul fond mai sus!</p>`;
+                return;
+            }
+
+            state.fundsList.forEach(fund => {
+                let paidCount = 0;
+                Object.values(fund.paidStudents || {}).forEach(val => { if (val) paidCount++; });
+
+                const totalCollected = paidCount * fund.targetAmount;
+                const maxTarget = state.students.length * fund.targetAmount;
+                const progress = maxTarget > 0 ? Math.round((totalCollected / maxTarget) * 100) : 0;
+
+                const card = document.createElement('div');
+                card.className = 'glass-card p-4 rounded-2xl cursor-pointer hover:border-blue-500/40 transition border border-slate-700/50 space-y-2';
+                card.onclick = () => openFundDetails(fund.id);
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-coins text-amber-400"></i> ${fund.title}
+                        </h3>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                            ${fund.targetAmount} MDL / elev
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-slate-400 pt-1">
+                        <span>Colectat: <strong class="text-emerald-400">${totalCollected} MDL</strong></span>
+                        <span>Achitat: <strong class="text-blue-400">${paidCount}/${state.students.length} (${progress}%)</strong></span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-blue-500 h-1.5 rounded-full" style="width: ${progress}%"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openFundDetails(fundId) {
+            state.activeFundId = fundId;
+            const fund = state.fundsList.find(f => f.id === fundId);
+            if (!fund) return;
+
+            document.getElementById('funds-list-view').classList.add('hidden');
+            document.getElementById('fund-detail-view').classList.remove('hidden');
+
+            renderActiveFundDetails();
+        }
+
+        function showFundsListView() {
+            state.activeFundId = null;
+            renderFundsListView();
+        }
+
+        function renderActiveFundDetails() {
+            const fund = state.fundsList.find(f => f.id === state.activeFundId);
+            if (!fund) return;
+
+            document.getElementById('active-fund-title').innerText = fund.title;
+            document.getElementById('active-fund-sub').innerText = `Target per elev: ${fund.targetAmount} MDL`;
+
+            const container = document.getElementById('fund-students-list-container');
+            container.innerHTML = '';
+
+            let paidCount = 0;
+
+            state.students.forEach(student => {
+                const hasPaid = !!fund.paidStudents[student.id];
+                if (hasPaid) paidCount++;
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl glass-card flex items-center justify-between border ${hasPaid ? 'border-emerald-500/20' : 'border-slate-700/50'}`;
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full ${hasPaid ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'} flex items-center justify-center text-xs font-bold">
+                            ${hasPaid ? '<i class="fa-solid fa-check"></i>' : student.name.charAt(0)}
+                        </div>
+                        <div>
+                            <p class="font-semibold text-xs text-slate-200">${student.name}</p>
+                            <span class="text-[10px] ${hasPaid ? 'text-emerald-400 font-semibold' : 'text-slate-400'}">
+                                ${hasPaid ? `Achitat (${fund.targetAmount} MDL)` : 'Neachitat'}
+                            </span>
+                        </div>
+                    </div>
+                    <button onclick="toggleActiveFundPayment('${student.id}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${hasPaid ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+                        ${hasPaid ? 'Achitat' : 'Marchează Achitat'}
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+
+            const totalCollected = paidCount * fund.targetAmount;
+            const maxTarget = state.students.length * fund.targetAmount;
+            const progress = maxTarget > 0 ? Math.round((totalCollected / maxTarget) * 100) : 0;
+
+            document.getElementById('active-fund-collected').innerText = `${totalCollected} MDL`;
+            document.getElementById('active-fund-progress').innerText = `${progress}% (${paidCount}/${state.students.length})`;
+        }
+
+        function toggleActiveFundPayment(studentId) {
+            const fund = state.fundsList.find(f => f.id === state.activeFundId);
+            if (!fund) return;
+
+            if (!fund.paidStudents) fund.paidStudents = {};
+            fund.paidStudents[studentId] = !fund.paidStudents[studentId];
+
+            saveState();
+            renderActiveFundDetails();
+        }
+
+        function setAllFundsForActive(status) {
+            const fund = state.fundsList.find(f => f.id === state.activeFundId);
+            if (!fund) return;
+
+            if (!fund.paidStudents) fund.paidStudents = {};
+            state.students.forEach(student => {
+                fund.paidStudents[student.id] = status;
+            });
+
+            saveState();
+            renderActiveFundDetails();
+            showToast(status ? 'Toți elevii marcați ca ACHITAT' : 'Toți elevii marcați ca NEACHITAT');
+        }
+
+        function deleteCurrentFund() {
+            showConfirmModal('Ștergere Fond', 'Sunteți sigur că doriți să ștergeți acest fond?', () => {
+                state.fundsList = state.fundsList.filter(f => f.id !== state.activeFundId);
+                saveState();
+                showFundsListView();
+                showToast('Fondul a fost șters');
+            });
+        }
+
+        // --- VIBER REPORT GENERATOR ---
+        function generateViberReport() {
+            const activeDate = getActiveSelectedDate();
+            const currentDayName = WEEKDAYS[state.selectedDayIndex];
+            const displayDate = `${currentDayName}, ${activeDate.getDate()} ${MONTH_NAMES_RO[activeDate.getMonth()]} ${activeDate.getFullYear()}`;
+            const textarea = document.getElementById('viber-report-text');
+
+            let report = `📋 *RAPORT PREZENȚĂ - ${displayDate}*\n`;
+            report += `─────────────────────\n\n`;
+
+            let hasAbsencesAnyLesson = false;
+            const daySchedule = state.schedule[currentDayName] || [];
+
+            if (daySchedule.length === 0) {
+                report += `Nu există perechi programate pentru ${currentDayName}.\n`;
+            } else {
+                const dateKey = formatDateKey(activeDate);
+                daySchedule.forEach(pair => {
+                    report += `📌 *${pair.name}* (${pair.time})\n`;
+
+                    const lessonData = state.attendance[dateKey]?.[pair.id] || {};
+                    const unexcusedList = state.students.filter(student => lessonData[student.id] === 'Nemotivat');
+
+                    if (unexcusedList.length === 0) {
+                        report += `  └  Toți elevii prezenți ✨\n\n`;
+                    } else {
+                        hasAbsencesAnyLesson = true;
+                        report += `  └  *Nemotivați (${unexcusedList.length}):*\n`;
+                        unexcusedList.forEach((s, idx) => {
+                            report += `      ${idx + 1}. ${s.name}\n`;
+                        });
+                        report += `\n`;
+                    }
+                });
+            }
+
+            report += `─────────────────────\n`;
+            if (!hasAbsencesAnyLesson && daySchedule.length > 0) {
+                report += `✅ Prezență completă în grupă astăzi! Felicitări!\n`;
+            } else if (hasAbsencesAnyLesson) {
+                report += `⚠️ Vă rugăm să verificați situația absențelor nemotivate.`;
+            }
+
+            textarea.value = report;
+        }
+
+        function copyViberReport() {
+            const textarea = document.getElementById('viber-report-text');
+            textarea.select();
+            document.execCommand('copy');
+            showToast('Raport copiat în clipboard!');
+        }
+
+        // --- MANAGE STUDENTS ---
+        function renderManageStudents() {
+            const container = document.getElementById('manage-students-container');
+            document.getElementById('students-count').innerText = state.students.length;
+            container.innerHTML = '';
+
+            if (state.students.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nu există elevi adăugați.</p>`;
+                return;
+            }
+
+            state.students.forEach((student, index) => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-2.5 rounded-xl glass-card';
+                item.innerHTML = `
+                    <div class="flex items-center space-x-2 flex-1 mr-2">
+                        <span class="text-xs text-slate-400 font-mono w-5">${index + 1}.</span>
+                        <input type="text" value="${student.name}" onchange="updateStudentName('${student.id}', this.value)" class="glass-input px-2 py-1 rounded-lg text-xs font-semibold w-full">
+                    </div>
+                    <button onclick="removeStudent('${student.id}')" class="p-1.5 text-rose-400 hover:text-rose-300 rounded-lg">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function importStudents() {
+            const textarea = document.getElementById('bulk-students-input');
+            const lines = textarea.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+            if (lines.length === 0) {
+                showToast('Introduceți cel puțin un nume de elev!');
+                return;
+            }
+
+            lines.forEach(name => {
+                const id = "s_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4);
+                state.students.push({ id, name });
+            });
+
+            textarea.value = '';
+            state.students.sort((a, b) => a.name.localeCompare(b.name, 'ro'));
+
+            saveState();
+            renderManageStudents();
+            renderAttendanceList();
+            if (state.activeFundId) renderActiveFundDetails();
+            showToast(`${lines.length} elevi adăugați cu succes!`);
+        }
+
+        function updateStudentName(id, newName) {
+            const student = state.students.find(s => s.id === id);
+            if (student && newName.trim()) {
+                student.name = newName.trim();
+                saveState();
+                showToast('Nume actualizat');
+            }
+        }
+
+        function removeStudent(id) {
+            showConfirmModal('Ștergere Elev', 'Sunteți sigur că doriți să ștergeți acest elev?', () => {
+                state.students = state.students.filter(s => s.id !== id);
+                state.fundsList.forEach(f => {
+                    if (f.paidStudents) delete f.paidStudents[id];
+                });
+                saveState();
+                renderManageStudents();
+                renderAttendanceList();
+                if (state.activeFundId) renderActiveFundDetails();
+                showToast('Elev șters');
+            });
+        }
+
+        function clearAllStudents() {
+            showConfirmModal('Ștergere Toți Elevii', 'Sunteți sigur că doriți să ștergeți TOȚI elevii din listă?', () => {
+                state.students = [];
+                state.fundsList.forEach(f => f.paidStudents = {});
+                saveState();
+                renderManageStudents();
+                renderAttendanceList();
+                if (state.activeFundId) renderActiveFundDetails();
+                showToast('Lista de elevi a fost golită');
+            });
+        }
+
+        // --- SCHEDULE PER DAY ---
+        function renderSchedulePairs() {
+            const container = document.getElementById('schedule-pairs-container');
+            const activeDay = document.getElementById('schedule-day-select').value;
+            container.innerHTML = '';
+
+            const pairs = state.schedule[activeDay] || [];
+
+            if (pairs.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nu există perechi adăugate pentru ${activeDay}.</p>`;
+                return;
+            }
+
+            pairs.forEach((pair, index) => {
+                const item = document.createElement('div');
+                item.className = 'p-3 rounded-xl glass-card space-y-2 border border-slate-700/50';
+                item.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-300">Perechea #${index + 1} (${activeDay})</span>
+                        <button onclick="removeSchedulePair('${pair.id}')" class="text-xs text-rose-400 hover:text-rose-300">Șterge</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input type="text" value="${pair.name}" onchange="updateSchedulePair('${pair.id}', 'name', this.value)" placeholder="Denumire (ex: Matematică)" class="glass-input p-2 rounded-lg text-xs">
+                        <input type="text" value="${pair.time}" onchange="updateSchedulePair('${pair.id}', 'time', this.value)" placeholder="Orare (ex: 08:30 - 09:50)" class="glass-input p-2 rounded-lg text-xs">
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function addSchedulePair() {
+            const activeDay = document.getElementById('schedule-day-select').value;
+            if (!state.schedule[activeDay]) state.schedule[activeDay] = [];
+
+            const num = state.schedule[activeDay].length + 1;
+            const newPair = {
+                id: "p_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+                name: `Perechea ${num}`,
+                time: "08:30 - 09:50"
+            };
+
+            state.schedule[activeDay].push(newPair);
+            saveState();
+            populateLessonSelect();
+            renderSchedulePairs();
+            showToast(`Pereche adăugată pentru ${activeDay}`);
+        }
+
+        function updateSchedulePair(id, field, value) {
+            const activeDay = document.getElementById('schedule-day-select').value;
+            const pair = (state.schedule[activeDay] || []).find(p => p.id === id);
+            if (pair) {
+                pair[field] = value.trim();
+                saveState();
+                populateLessonSelect();
+            }
+        }
+
+        function removeSchedulePair(id) {
+            const activeDay = document.getElementById('schedule-day-select').value;
+            state.schedule[activeDay] = (state.schedule[activeDay] || []).filter(p => p.id !== id);
+            saveState();
+            populateLessonSelect();
+            renderSchedulePairs();
+            showToast('Pereche ștearsă');
+        }
+
+        // --- UTILS & MODALS ---
+        function showToast(message) {
+            const toast = document.getElementById('toast-notification');
+            const toastMsg = document.getElementById('toast-message');
+            toastMsg.innerText = message;
+
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        function showConfirmModal(title, text, onConfirm) {
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-body').innerText = text;
+
+            const actionsContainer = document.getElementById('modal-actions');
+            actionsContainer.innerHTML = `
+                <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700">Anulează</button>
+                <button id="modal-confirm-btn" class="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-semibold hover:bg-rose-500 shadow-lg shadow-rose-600/30">Confirmă</button>
+            `;
+
+            document.getElementById('modal-confirm-btn').onclick = () => {
+                closeModal();
+                if (onConfirm) onConfirm();
+            };
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
